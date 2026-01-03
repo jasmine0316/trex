@@ -66,3 +66,7 @@ sudo ./trex-console
 > start -f stl/throughput_test.py -p 0 1 --force
 > stats
 ```
+
+### 參考網站
+https://github.com/cisco-system-traffic-generator/trex-stateless-gui/wiki#installation \
+https://blog.hacksbrain.com/cisco-trex-packet-generator-step-by-step
