@@ -2,6 +2,7 @@
 
   ### flow
 TREX LAN1發包給DUT  DUT會設Routing模式，LAN1收到後會從內部轉發給LAN2，DUT LAN2會再回傳封包給TREX的LAN2確認接收
+
        (TRex port 0)                        (TRex port 1)
     IP: 192.168.130.5/24                 IP: 192.168.47.19/24
           |                                     |
@@ -14,6 +15,7 @@ TREX LAN1發包給DUT  DUT會設Routing模式，LAN1收到後會從內部轉發�
               |                                     |
       Static route:                          Static route:
   16.0.0.0/16 via 192.168.130.5         48.0.0.0/16 via 192.168.47.19
+
 
   ### (trex)關掉 IOMMU 測試
   #turbostat
