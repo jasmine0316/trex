@@ -18,6 +18,7 @@ TREX LAN1發包給DUT  DUT會設Routing模式，LAN1收到後會從內部轉發�
 
   ### (trex)關掉 IOMMU 測試
   #turbostat
+  
 GRUB_CMDLINE_LINUX_DEFAULT="quiet splash intel_iommu=off processor.max_cstate=1 intel_idle.max_cstate=0"  
 
 lspci -k | grep -A 3 Ethernet  #乙太網卡的 PCI 裝置資訊
