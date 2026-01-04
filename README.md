@@ -1,95 +1,44 @@
-# trex
+# red hat
+```
+subscription-manager register --username <username> --password <password> 
+ 
+#sam5013200
+#Kwoe1ktx19920803
+subscription-manager register --username sam50132003 --password Kwoe1ktx19920803
+subscription-manager register --username njq94268 --password 94286FN1lo0O%sa
 
 
-(需求)\
-封包大小組合 : 1518,1280,1024,5120256,128,64 bytes \
-每個封包大小流程\
-每 round = 60 秒\
-先從 50% line rate 開始\
-如果 drop-rate = 0 → pass → 下一 round 用 75%\
-如果 drop-rate > 0 → fail → 下一 round 用 25%\
-以此類推（二分搜尋法方式遞進）
-
-最終輸出 : 
-每個封包大小，記錄「最後通過的 line rate (multiplier)%」
-
-  ### flow
-TREX LAN1發包給DUT  DUT會設Routing模式，LAN1收到後會從內部轉發給LAN2，DUT LAN2會再回傳封包給TREX的LAN2確認接收
-
-<img width="569" height="278" alt="image" src="https://github.com/user-attachments/assets/d96baa13-492b-4950-829e-580fad369cb0" />
+sudo dnf update
 
 
 
-### (trex)關掉 IOMMU 測試
-```
-#turbostat
-GRUB_CMDLINE_LINUX_DEFAULT="quiet splash intel_iommu=off processor.max_cstate=1 intel_idle.max_cstate=0" 
-```
-### 乙太網卡的 PCI 裝置資訊
-```
-lspci -k | grep -A 3 Ethernet
-```
-### 腳本驗證trex是否可以看到所需的接口
-```
-sudo ./dpdk_setup_ports.py -t 
-```
-### 還原驅動=igc
-```
-sudo ./dpdk_nic_bind.py --bind=igc 01:00.0
+sudo nano /etc/default/grub
+
+GRUB_CMDLINE_LINUX="console=tty0 console=ttyS0,115200n8 processor.max_cstate=1 intel_idle.max_cstate=0"
+
+grub2-mkconfig -o /boot/grub2/grub.cfg --update-bls-cmdline
+
+sudo reboot
+
 ```
 
-## 啟動Trex
-TRex port0:  src=1.1.1.5   <------>  DUT enp1s0: 1.1.1.1\
-TRex port1:  src=2.2.2.5   <------>  DUT enp2s0: 2.2.2.2\
-TRex port0:  src=3.3.3.5   <------>  DUT enp1s0: 3.3.3.3\
-TRex port1:  src=4.4.4.5   <------>  DUT enp2s0: 4.4.4.4
+在打SMARTBIT前一般我們在OS會優化幾項設定
 
-### 設定 hugepages
 ```
-echo 1024 | sudo tee /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages   
-cat /proc/meminfo | grep Huge
-```
-### set IP
-```
-sudo ip addr add 1.1.1.1/24 dev enp1s0
-sudo ip addr add 2.2.2.2/24 dev enp2s0
-sudo ip addr add 3.3.3.3/24 dev enp3s0
-sudo ip addr add 4.4.4.4/24 dev enp4s0
-```
-### enable forwarding
-```
-sudo sysctl -w net.ipv4.ip_forward=1
-```
-### add routes
-```
-sudo ip route add 16.0.0.0/16 via 1.1.1.5 dev enp1s0
-sudo ip route add 48.0.0.0/16 via 2.2.2.5 dev enp2s0
-sudo ip route add 32.0.0.0/16 via 3.3.3.5 dev enp3s0
-sudo ip route add 64.0.0.0/16 via 4.4.4.5 dev enp4s0
-```
-### 直接綁定 TRex 的 MAC
-```
-sudo arp -i enp1s0 -s 1.1.1.5 00:07:32:bf:6c:d0
-sudo arp -i enp2s0 -s 2.2.2.5 00:07:32:bf:6c:d1
-sudo arp -i enp3s0 -s 3.3.3.5 00:07:32:bf:6c:d2
-sudo arp -i enp4s0 -s 4.4.4.5 00:07:32:bf:6c:d3
-```
-### 啟動 TRex
-```
-sudo ./t-rex-64 -i
-sudo ./trex-console
+su -
+
+
+nmcli connection show
+nmcli connection up enp2s0
+
+lscpu  #看幾核心，改腳本
+
+chmod +x turbo_redhat.sh
+sudo ./turbo_redhat.sh
+
+ip a  //確定固定ipu
+
+
+systemctl disable firewalld    #Red hat OS第一次裝完要把防火牆關掉
 ```
 
-進trex-console
-```
-> portattr 
-> start -f dual_port_test.p  #stop
-
-> start -f stl/bench.py -p 0 1 -m 90% --force   //-m line rate
-> start -f stl/throughput_test.py -p 0 1 --force
-> stats
-```
-
-### 參考網站
-https://github.com/cisco-system-traffic-generator/trex-stateless-gui/wiki#installation \
-https://blog.hacksbrain.com/cisco-trex-packet-generator-step-by-step
