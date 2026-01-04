@@ -1,0 +1,112 @@
+https://github.com/cisco-system-traffic-generator/trex-stateless-gui/wiki#installation
+
+https://blog.hacksbrain.com/cisco-trex-packet-generator-step-by-step  #參考網站
+
+TREX LAN1發包給DUT  DUT會設Routing模式，LAN1收到後會從內部轉發給LAN2，DUT LAN2會再回傳封包給TREX的LAN2確認接收
+
+           (TRex port 0)                        (TRex port 1)
+        IP: 192.168.130.5/24                 IP: 192.168.47.19/24
+              |                                     |
+              |                                     |
+         enp1s0 (DUT)                          enp2s0 (DUT)
+     IP: 192.168.130.1/24                  IP: 192.168.47.18/24
+              |                                     |
+   Connected route:                          Connected route:
+   192.168.130.0/24 → enp1s0                 192.168.47.0/24 → enp2s0
+              |                                     |
+      Static route:                          Static route:
+  16.0.0.0/16 via 192.168.130.5         48.0.0.0/16 via 192.168.47.19
+
+
+-------------------------------------------------------------------------------------
+(trex)關掉 IOMMU 測試
+
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash intel_iommu=off processor.max_cstate=1 intel_idle.max_cstate=0"   #turbostat
+
+------------------------------------------------------------------------------------------------------------------
+
+lspci -k | grep -A 3 Ethernet  #乙太網卡的 PCI 裝置資訊
+
+
+
+ sudo ./dpdk_setup_ports.py -t   #腳本驗證trex是否可以看到所需的接口
+
+
+
+ sudo ./dpdk_nic_bind.py --bind=igc 01:00.0  #還原驅動=igc
+
+ ip route
+
+ sudo ./t-rex-64 -i  #啟動 TRex 
+ sudo ./trex-console
+  trex> portattr 
+        start -f dual_port_test.py   #stop
+
+      > start -f stl/bench.py -p 0 1 -m 90% --force   //-m line rate
+      > start -f stl/throughput_test.py -p 0 1 --force
+      > stats
+
+
+  sudo ./t-rex-64 -f cap2/http_simple.yaml -d 0 -m 2.5gbps -c 1 --nc 
+  #當腳本啟動時，它會將配置的 IP 位址指派給乙太網路 1 和 2，然後嘗試對已設定的網關 IP 位址進行免費 ARP。
+	2.5G  -m 2.5gbps
+	1G    -m 1gbps
+	100M  -m 100mbps
+	10M   -m 10mbps
+ 
+	
+
+   echo 1024 | sudo tee /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages   #設定 hugepages
+   cat /proc/meminfo | grep Huge
+
+    
+
+--------------------------------------------------------------------------------------
+
+TRex port0:  src=1.1.1.5   <------>  DUT enp1s0: 1.1.1.1
+TRex port1:  src=2.2.2.5   <------>  DUT enp2s0: 2.2.2.2
+
+--------------------------------------------------------------------
+
+# set IP
+sudo ip addr add 1.1.1.1/24 dev enp1s0
+sudo ip addr add 2.2.2.2/24 dev enp2s0
+
+# enable forwarding
+sudo sysctl -w net.ipv4.ip_forward=1
+
+# add routes
+sudo ip route add 16.0.0.0/16 via 1.1.1.5 dev enp1s0
+sudo ip route add 48.0.0.0/16 via 2.2.2.5 dev enp2s0
+
+#直接綁定 TRex 的 MAC
+sudo arp -i enp1s0 -s 1.1.1.5 00:07:32:bf:6c:d0
+sudo arp -i enp2s0 -s 2.2.2.5 00:07:32:bf:6c:d1
+
+# see routing decisions
+ip route
+
+------------------------------------------------------------------------------------
+(需求)
+
+封包大小組合
+
+  > 1518,1280,1024,5120256,128,64 bytes
+
+每個封包大小流程
+
+  > 每 round = 60 秒
+
+  > 先從 50% line rate 開始
+
+  > 如果 drop-rate = 0 → pass → 下一 round 用 75%
+
+  > 如果 drop-rate > 0 → fail → 下一 round 用 25%
+
+  > 以此類推（二分搜尋法方式遞進）
+
+最終輸出
+
+  > 每個封包大小，記錄「最後通過的 line rate (multiplier)%」
+
+------------------------------------------------------------------------------------
