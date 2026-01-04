@@ -1,5 +1,18 @@
 # trex
 
+
+(需求)\
+封包大小組合 : 1518,1280,1024,5120256,128,64 bytes \
+每個封包大小流程\
+每 round = 60 秒\
+先從 50% line rate 開始\
+如果 drop-rate = 0 → pass → 下一 round 用 75%\
+如果 drop-rate > 0 → fail → 下一 round 用 25%\
+以此類推（二分搜尋法方式遞進）
+
+最終輸出 : 
+每個封包大小，記錄「最後通過的 line rate (multiplier)%」
+
   ### flow
 TREX LAN1發包給DUT  DUT會設Routing模式，LAN1收到後會從內部轉發給LAN2，DUT LAN2會再回傳封包給TREX的LAN2確認接收
 
@@ -7,12 +20,22 @@ TREX LAN1發包給DUT  DUT會設Routing模式，LAN1收到後會從內部轉發�
 
 
 
-  ### (trex)關掉 IOMMU 測試
-  ```
+### (trex)關掉 IOMMU 測試
+```
 #turbostat
-GRUB_CMDLINE_LINUX_DEFAULT="quiet splash intel_iommu=off processor.max_cstate=1 intel_idle.max_cstate=0"  
-lspci -k | grep -A 3 Ethernet  #乙太網卡的 PCI 裝置資訊
-sudo ./dpdk_setup_ports.py -t  #腳本驗證trex是否可以看到所需的接口
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash intel_iommu=off processor.max_cstate=1 intel_idle.max_cstate=0" 
+```
+### 乙太網卡的 PCI 裝置資訊
+```
+lspci -k | grep -A 3 Ethernet
+```
+### 腳本驗證trex是否可以看到所需的接口
+```
+sudo ./dpdk_setup_ports.py -t 
+```
+### 還原驅動=igc
+```
+sudo ./dpdk_nic_bind.py --bind=igc 01:00.0
 ```
 
 ## 啟動Trex
